@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/Shopify/sarama"
 	"github.com/bit0rez/kafka-tools/flags"
@@ -60,31 +59,17 @@ func consume(ctx *cli.Context) error {
 	go func() {
 		defer close(errCh)
 		defer close(dataCh)
-		wg := sync.WaitGroup{}
+		h := handler{dataCh: dataCh}
+
 		for {
 			select {
 			case <-ctx.Done():
-				g.Close()
-				wg.Wait()
-				return
-			case err, ok := <-g.Errors():
-				if !ok {
-					return
+				if err := g.Close(); err != nil {
+					errCh <- err
 				}
-				errCh <- err
+				return
 			default:
 			}
-
-			h := newHandler()
-
-			// PIPE between rebalanced sesstion handler and APP handler
-			wg.Add(1)
-			go func() {
-				for m := range h.dataCh {
-					dataCh <- m
-				}
-				wg.Done()
-			}()
 
 			if err = g.Consume(ctx.Context, ctx.StringSlice(flags.TopicsFlag.Name), h); err != nil {
 				errCh <- errors.Wrap(err, "consume")
@@ -105,6 +90,11 @@ func consume(ctx *cli.Context) error {
 			} else {
 				os.Stdout.Write(m.Value)
 			}
+		case err, ok := <-g.Errors():
+			if !ok {
+				return nil
+			}
+			fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		case err, ok := <-errCh:
 			if !ok {
 				return nil
@@ -118,28 +108,21 @@ type handler struct {
 	dataCh chan *sarama.ConsumerMessage
 }
 
-func newHandler() *handler {
-	return &handler{
-		dataCh: make(chan *sarama.ConsumerMessage, 1),
-	}
-}
-
 // Setup is run at the beginning of a new session, before ConsumeClaim.
-func (h *handler) Setup(s sarama.ConsumerGroupSession) error {
+func (handler) Setup(s sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
-func (h *handler) Cleanup(s sarama.ConsumerGroupSession) error {
-	close(h.dataCh)
+func (handler) Cleanup(s sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
-func (h *handler) ConsumeClaim(s sarama.ConsumerGroupSession, c sarama.ConsumerGroupClaim) error {
+func (h handler) ConsumeClaim(s sarama.ConsumerGroupSession, c sarama.ConsumerGroupClaim) error {
 	for {
 		select {
 		case <-s.Context().Done():
