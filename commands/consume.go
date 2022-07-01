@@ -10,6 +10,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	OUTPUT_STAT = "stat"
+	OUTPUT_RAW  = "raw"
+	OUTPUT_HEX  = "hex"
+)
+
 var (
 	flagGroupID = cli.StringFlag{
 		Name:    "group",
@@ -18,11 +24,18 @@ var (
 		Value:   "kafka-tools",
 	}
 
-	flagStatOnly = cli.BoolFlag{
-		Name:    "stat",
-		Usage:   "print only stat",
-		Aliases: []string{"s"},
-		Value:   false,
+	flagFormat = cli.StringFlag{
+		Name:    "format",
+		Usage:   "one of: stat, raw, hex",
+		Aliases: []string{"f"},
+		Value:   OUTPUT_STAT,
+	}
+
+	flagOffset = cli.Int64Flag{
+		Name:    "offset",
+		Aliases: []string{"o"},
+		Usage:   "For newest: -1. For oldest: -2.",
+		Value:   sarama.OffsetNewest,
 	}
 
 	Consume = cli.Command{
@@ -35,13 +48,15 @@ var (
 			&flags.BootstrapFlag,
 			&flags.TopicsFlag,
 			&flagGroupID,
-			&flagStatOnly,
+			&flagFormat,
+			&flagOffset,
 		},
 	}
 )
 
 func consume(ctx *cli.Context) error {
 	cfg := sarama.NewConfig()
+	cfg.Consumer.Offsets.Initial = ctx.Int64(flagOffset.Name)
 
 	g, err := sarama.NewConsumerGroup(
 		ctx.StringSlice(flags.BootstrapFlag.Name),
@@ -78,18 +93,13 @@ func consume(ctx *cli.Context) error {
 	}()
 
 	// App handler
-	statOnly := ctx.Bool(flagStatOnly.Name)
 	for {
 		select {
 		case m, ok := <-dataCh:
 			if !ok {
 				return nil
 			}
-			if statOnly {
-				fmt.Printf("Topic: %s\tPartition: %d\tOffset: %d\n", m.Topic, m.Partition, m.Offset)
-			} else {
-				os.Stdout.Write(m.Value)
-			}
+			out(ctx.String(flagFormat.Name), m)
 		case err, ok := <-g.Errors():
 			if !ok {
 				return nil
@@ -133,5 +143,17 @@ func (h handler) ConsumeClaim(s sarama.ConsumerGroupSession, c sarama.ConsumerGr
 			}
 			h.dataCh <- m
 		}
+	}
+}
+
+func out(format string, msg *sarama.ConsumerMessage) {
+	switch format {
+	case OUTPUT_STAT:
+		fmt.Printf("Topic: %s\tPartition: %d\tOffset: %d\n", msg.Topic, msg.Partition, msg.Offset)
+	case OUTPUT_HEX:
+		fmt.Printf("%x\n", msg.Value)
+	case OUTPUT_RAW:
+		os.Stdout.Write(msg.Value)
+	default:
 	}
 }
