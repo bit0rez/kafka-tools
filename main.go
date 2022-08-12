@@ -7,7 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bit0rez/kafka-tools/commands"
+	"github.com/bit0rez/kafka-tools/command/consume"
+	"github.com/bit0rez/kafka-tools/command/produce"
+	"github.com/bit0rez/kafka-tools/command/topic"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 )
@@ -18,9 +20,9 @@ func main() {
 	app := cli.App{
 		Name: "Kafka tools",
 		Commands: []*cli.Command{
-			&commands.Produce,
-			&commands.Consume,
-			&commands.Topic,
+			&produce.Produce,
+			&consume.Consume,
+			&topic.Topic,
 		},
 	}
 
