@@ -18,7 +18,14 @@ func main() {
 	_ = godotenv.Load()
 
 	app := cli.App{
-		Name: "Kafka tools",
+		Authors: []*cli.Author{
+			{
+				Name:  "Merkulov Ilia aka bit0rez",
+				Email: "ilia@merkulov.online",
+			},
+		},
+		Name:                 "Kafka tools",
+		EnableBashCompletion: true,
 		Commands: []*cli.Command{
 			&produce.Produce,
 			&consume.Consume,
