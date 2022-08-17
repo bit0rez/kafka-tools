@@ -1,6 +1,11 @@
 # kafka-tools
 
 ## Usage
+### Completion
+```
+  $ source <(kafka-tools completion)
+```
+
 ### Consumer
 
 ```
