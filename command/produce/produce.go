@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
+	"github.com/bit0rez/kafka-tools/command"
 	"github.com/bit0rez/kafka-tools/flags"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -16,7 +17,7 @@ var Produce = cli.Command{
 	Usage:       "Simple message producer from STDIN",
 	Description: "Simple message producer from STDIN",
 	UsageText:   `$ echo '{"id": 1, "name": "user"}' | kafka-tools produce -t test -H key=value`,
-	Action:      produce,
+	Action:      command.HandleCliCtx(produce),
 	Flags: []cli.Flag{
 		&flags.BootstrapFlag,
 		&flags.TopicFlag,
@@ -34,10 +35,15 @@ func produce(ctx *cli.Context) error {
 	cfg.ClientID = "kafka-tools"
 	cfg.Producer.Return.Successes = true
 
-	p, err := sarama.NewSyncProducer(
+	client, err := sarama.NewClient(
 		ctx.StringSlice(flags.BootstrapFlag.Name),
 		cfg,
 	)
+	if err != nil {
+		return errors.Wrap(err, "create sarama client")
+	}
+
+	p, err := sarama.NewSyncProducerFromClient(client)
 	if err != nil {
 		return errors.Wrap(err, "create sync producer")
 	}
@@ -69,19 +75,9 @@ func produce(ctx *cli.Context) error {
 		Value:   sarama.ByteEncoder(b),
 	}
 
-	errCh := make(chan error, 1)
-	go func() {
-		_, _, err := p.SendMessage(&msg)
-		errCh <- err
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err = <-errCh:
-		if err != nil {
-			return errors.Wrap(err, "send message")
-		}
+	_, _, err = p.SendMessage(&msg)
+	if err != nil {
+		return errors.Wrap(err, "send message")
 	}
 
 	return p.Close()

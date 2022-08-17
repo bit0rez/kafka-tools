@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/Shopify/sarama"
+	"github.com/bit0rez/kafka-tools/command"
 	"github.com/bit0rez/kafka-tools/flags"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -29,7 +30,7 @@ var (
 		Subcommands: []*cli.Command{
 			{
 				Name:   "create",
-				Action: topicCreate,
+				Action: command.HandleCliCtx(topicCreate),
 				Flags: []cli.Flag{
 					&flags.BootstrapFlag,
 					&flags.TopicFlag,
@@ -39,14 +40,14 @@ var (
 			},
 			{
 				Name:   "list",
-				Action: topicList,
+				Action: command.HandleCliCtx(topicList),
 				Flags: []cli.Flag{
 					&flags.BootstrapFlag,
 				},
 			},
 			{
 				Name:   "delete",
-				Action: topicDelete,
+				Action: command.HandleCliCtx(topicDelete),
 				Flags: []cli.Flag{
 					&flags.BootstrapFlag,
 					&flags.TopicFlag,

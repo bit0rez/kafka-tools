@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Shopify/sarama"
+	"github.com/bit0rez/kafka-tools/command"
 	"github.com/bit0rez/kafka-tools/flags"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -43,7 +44,7 @@ var (
 		Usage:       "Simple message consumer",
 		Description: "Simple message consumer",
 		UsageText:   `$ kafka-tools consume -t test | jq `,
-		Action:      consume,
+		Action:      command.HandleCliCtx(consume),
 		Flags: []cli.Flag{
 			&flags.BootstrapFlag,
 			&flags.TopicsFlag,
