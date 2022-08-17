@@ -69,9 +69,19 @@ func produce(ctx *cli.Context) error {
 		Value:   sarama.ByteEncoder(b),
 	}
 
-	_, _, err = p.SendMessage(&msg)
-	if err != nil {
-		return errors.Wrap(err, "send message")
+	errCh := make(chan error, 1)
+	go func() {
+		_, _, err := p.SendMessage(&msg)
+		errCh <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err = <-errCh:
+		if err != nil {
+			return errors.Wrap(err, "send message")
+		}
 	}
 
 	return p.Close()
