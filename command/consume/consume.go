@@ -20,6 +20,7 @@ const (
 var (
 	flagGroupID = cli.StringFlag{
 		Name:    "group",
+		Usage:   "Consumer group",
 		Aliases: []string{"g"},
 		EnvVars: []string{"CONSUME_GROUP"},
 		Value:   "kafka-tools",

@@ -14,12 +14,14 @@ import (
 var (
 	flagPartitions = cli.UintFlag{
 		Name:    "partitions",
+		Usage:   "Count of topic partitions",
 		Aliases: []string{"p"},
 		Value:   1,
 	}
 
 	flagReplicationFactor = cli.UintFlag{
 		Name:    "replication_factor",
+		Usage:   "Topic replication factor",
 		Aliases: []string{"r"},
 		Value:   1,
 	}
